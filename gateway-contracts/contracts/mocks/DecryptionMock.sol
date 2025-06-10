@@ -13,36 +13,6 @@ contract DecryptionMock {
         uint256 durationDays;
     }
 
-    struct PublicDecryptVerification {
-        bytes32[] ctHandles;
-        bytes decryptedResult;
-        bytes extraData;
-    }
-
-    struct UserDecryptRequestVerification {
-        bytes publicKey;
-        address[] contractAddresses;
-        uint256 startTimestamp;
-        uint256 durationDays;
-        bytes extraData;
-    }
-
-    struct UserDecryptResponseVerification {
-        bytes publicKey;
-        bytes32[] ctHandles;
-        bytes userDecryptedShare;
-        bytes extraData;
-    }
-
-    struct DelegatedUserDecryptRequestVerification {
-        bytes publicKey;
-        address[] contractAddresses;
-        address delegatorAddress;
-        uint256 startTimestamp;
-        uint256 durationDays;
-        bytes extraData;
-    }
-
     struct UserDecryptionPayload {
         bytes publicKey;
         bytes32[] ctHandles;
@@ -51,6 +21,7 @@ contract DecryptionMock {
     event PublicDecryptionRequest(
         uint256 indexed decryptionId,
         SnsCiphertextMaterial[] snsCtMaterials,
+        string[][] storageUrls,
         bytes extraData
     );
 
@@ -64,6 +35,7 @@ contract DecryptionMock {
     event UserDecryptionRequest(
         uint256 indexed decryptionId,
         SnsCiphertextMaterial[] snsCtMaterials,
+        string[][] storageUrls,
         address userAddress,
         bytes publicKey,
         bytes extraData
@@ -86,8 +58,9 @@ contract DecryptionMock {
         publicDecryptionCounter++;
         uint256 decryptionId = publicDecryptionCounter;
         SnsCiphertextMaterial[] memory snsCtMaterials = new SnsCiphertextMaterial[](1);
+        string[][] memory storageUrls = new string[][](1);
 
-        emit PublicDecryptionRequest(decryptionId, snsCtMaterials, extraData);
+        emit PublicDecryptionRequest(decryptionId, snsCtMaterials, storageUrls, extraData);
     }
 
     function publicDecryptionResponse(
@@ -113,8 +86,9 @@ contract DecryptionMock {
         userDecryptionCounter++;
         uint256 decryptionId = userDecryptionCounter;
         SnsCiphertextMaterial[] memory snsCtMaterials = new SnsCiphertextMaterial[](1);
+        string[][] memory storageUrls = new string[][](1);
 
-        emit UserDecryptionRequest(decryptionId, snsCtMaterials, userAddress, publicKey, extraData);
+        emit UserDecryptionRequest(decryptionId, snsCtMaterials, storageUrls, userAddress, publicKey, extraData);
     }
 
     function delegatedUserDecryptionRequest(
@@ -129,9 +103,10 @@ contract DecryptionMock {
         userDecryptionCounter++;
         uint256 decryptionId = userDecryptionCounter;
         SnsCiphertextMaterial[] memory snsCtMaterials = new SnsCiphertextMaterial[](1);
+        string[][] memory storageUrls = new string[][](1);
         address userAddress;
 
-        emit UserDecryptionRequest(decryptionId, snsCtMaterials, userAddress, publicKey, extraData);
+        emit UserDecryptionRequest(decryptionId, snsCtMaterials, storageUrls, userAddress, publicKey, extraData);
     }
 
     function userDecryptionResponse(
