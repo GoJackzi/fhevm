@@ -88,6 +88,7 @@ impl DbEventProcessor {
                     .prepare_decryption_request(
                         req.decryptionId,
                         req.snsCtMaterials,
+                        req.storageUrls,
                         req.extraData.into(),
                         None,
                     )
@@ -98,6 +99,7 @@ impl DbEventProcessor {
                     .prepare_decryption_request(
                         req.decryptionId,
                         req.snsCtMaterials,
+                        req.storageUrls,
                         req.extraData.into(),
                         Some(UserDecryptionExtraData::new(req.userAddress, req.publicKey)),
                     )

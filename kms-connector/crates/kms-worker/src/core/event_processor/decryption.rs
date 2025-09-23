@@ -8,7 +8,7 @@ use crate::core::{
 use alloy::{
     hex,
     primitives::{Address, Bytes, U256},
-    sol_types::{Eip712Domain, SolValue},
+    sol_types::Eip712Domain,
 };
 use anyhow::anyhow;
 use connector_utils::types::KmsGrpcRequest;
@@ -49,6 +49,7 @@ impl DecryptionProcessor {
         &self,
         decryption_id: U256,
         sns_materials: Vec<SnsCiphertextMaterial>,
+        storage_urls: Vec<Vec<String>>,
         extra_data: Vec<u8>,
         user_decrypt_data: Option<UserDecryptionExtraData>,
     ) -> anyhow::Result<KmsGrpcRequest> {
@@ -62,7 +63,7 @@ impl DecryptionProcessor {
         info!("Extracted key_id {key_id} from snsCtMaterials[0]");
 
         let ciphertexts = self
-            .prepare_ciphertexts(decryption_id, &key_id, sns_materials, &extra_data)
+            .prepare_ciphertexts(decryption_id, &key_id, sns_materials, storage_urls)
             .await?;
 
         // Convert alloy domain to protobuf domain
@@ -114,12 +115,11 @@ impl DecryptionProcessor {
         decryption_id: U256,
         key_id: &str,
         sns_materials: Vec<SnsCiphertextMaterial>,
-        extra_data: &[u8],
+        storage_urls: Vec<Vec<String>>,
     ) -> anyhow::Result<Vec<TypedCiphertext>> {
-        let s3_url_matrix = decode_s3_url_matrix(extra_data)?;
         let sns_ciphertext_materials = self
             .s3_service
-            .retrieve_sns_ciphertext_materials(sns_materials, s3_url_matrix)
+            .retrieve_sns_ciphertext_materials(sns_materials, storage_urls)
             .await;
 
         if sns_ciphertext_materials.is_empty() {
@@ -144,11 +144,6 @@ impl DecryptionProcessor {
     }
 }
 
-fn decode_s3_url_matrix(extra_data: &[u8]) -> anyhow::Result<Vec<Vec<String>>> {
-    let (_version, urls): (u32, Vec<Vec<String>>) = SolValue::abi_decode_sequence(extra_data)?;
-    Ok(urls)
-}
-
 pub struct UserDecryptionExtraData {
     pub user_address: Address,
     pub public_key: Bytes,
@@ -161,41 +156,4 @@ impl UserDecryptionExtraData {
             public_key,
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_urls_decoding() {
-        let url_matrix = vec![
-            vec![
-                String::from("http://localhost"),
-                String::from("https://127.0.0.1:80/"),
-            ],
-            vec![String::from("http://localhost:81/test")],
-        ];
-
-        let extra_data = hex::decode(REMIX_GENERATED_EXTRA_DATA).unwrap();
-        let decoded_url_matrix = decode_s3_url_matrix(&extra_data).unwrap();
-        assert_eq!(url_matrix, decoded_url_matrix);
-    }
-
-    // Encoded bytes retrieved with the following function in Remix
-    // ```
-    // function encode() public pure returns (bytes memory) {
-    //     string[] memory url_array1 = new string[](2);
-    //     url_array1[0] = "http://localhost";
-    //     url_array1[1] = "https://127.0.0.1:80/";
-    //     string[] memory url_array2 = new string[](1);
-    //     url_array2[0] = "http://localhost:81/test";
-    //     string[][] memory url_matrix =  new string[][](2);
-    //     url_matrix[0] = url_array1;
-    //     url_matrix[1] = url_array2;
-    //     uint32 version = 1;
-    //     return abi.encode(version, url_matrix);
-    // }
-    // ```
-    const REMIX_GENERATED_EXTRA_DATA: &str = "0x000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000010687474703a2f2f6c6f63616c686f737400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001568747470733a2f2f3132372e302e302e313a38302f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000018687474703a2f2f6c6f63616c686f73743a38312f746573740000000000000000";
 }

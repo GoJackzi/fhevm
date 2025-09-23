@@ -40,11 +40,11 @@ impl S3Service {
     pub async fn retrieve_sns_ciphertext_materials(
         &self,
         sns_materials: Vec<SnsCiphertextMaterial>,
-        s3_urls_metrix: Vec<Vec<String>>,
+        s3_urls_matrix: Vec<Vec<String>>,
     ) -> Vec<TypedCiphertext> {
         let mut sns_ciphertext_materials = Vec::new();
 
-        for (sns_material, mut s3_urls) in sns_materials.into_iter().zip(s3_urls_metrix) {
+        for (sns_material, mut s3_urls) in sns_materials.into_iter().zip(s3_urls_matrix) {
             // 1. For each SNS material, we try to retrieve its ciphertext from multiple possible S3 URLs
             //    1.1. We try to fetch the ciphertext for `self.s3_ct_retrieval_retries` times for each S3 URL
             // 2. Once we successfully retrieve a ciphertext from any of those URLs, we break out of the S3 URLs loop
