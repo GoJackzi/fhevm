@@ -40,13 +40,18 @@ impl S3Service {
     pub async fn retrieve_sns_ciphertext_materials(
         &self,
         sns_materials: Vec<SnsCiphertextMaterial>,
-        s3_urls_matrix: Vec<Vec<String>>,
+        mut s3_urls_matrix: Vec<Vec<String>>,
     ) -> Vec<TypedCiphertext> {
-        let mut sns_ciphertext_materials = Vec::new();
+        fill_urls_if_needed(
+            &sns_materials,
+            &mut s3_urls_matrix,
+            self.fallback_config.as_ref(),
+        );
 
+        let mut sns_ciphertext_materials = Vec::new();
         for (sns_material, mut s3_urls) in sns_materials.into_iter().zip(s3_urls_matrix) {
             // 1. For each SNS material, we try to retrieve its ciphertext from multiple possible S3 URLs
-            //    1.1. We try to fetch the ciphertext for `self.s3_ct_retrieval_retries` times for each S3 URL
+            //    1.1. We try to fetch the ciphertext for `self.s3_ciphertext_retrieval_retries` times for each S3 URL
             // 2. Once we successfully retrieve a ciphertext from any of those URLs, we break out of the S3 URLs loop
             // 3. Then we continue processing the next SNS material in the outer loop
 
@@ -79,7 +84,7 @@ impl S3Service {
         sns_ciphertext_materials
     }
 
-    /// Retrieves a ciphertext from S3 with `self.s3_ct_retrieval_retries` retries.
+    /// Retrieves a ciphertext from S3 with `self.s3_ciphertext_retrieval_retries` retries.
     pub async fn retrieve_s3_ciphertext_with_retry(
         &self,
         s3_urls: Vec<String>,
@@ -214,6 +219,27 @@ pub fn compute_digest(ct: &[u8]) -> Vec<u8> {
     let result = hasher.finalize().to_vec();
     debug!("Digest computed: {}", hex::encode(&result));
     result
+}
+
+fn fill_urls_if_needed(
+    sns_materials: &[SnsCiphertextMaterial],
+    s3_urls_matrix: &mut Vec<Vec<String>>,
+    fallback_config: Option<&S3Config>,
+) {
+    if sns_materials.len() > s3_urls_matrix.len() {
+        warn!(
+            "Not enough URL entries ({}) compared to ciphertexts ({}). Will try to use default config...",
+            s3_urls_matrix.len(),
+            sns_materials.len(),
+        );
+
+        s3_urls_matrix.extend(vec![
+            fallback_config
+                .map(|c| vec![extract_fallback_url(c)])
+                .unwrap_or_default();
+            sns_materials.len() - s3_urls_matrix.len()
+        ]);
+    }
 }
 
 pub fn extract_fallback_url(s3_config: &S3Config) -> String {
