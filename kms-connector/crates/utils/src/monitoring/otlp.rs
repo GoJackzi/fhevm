@@ -104,3 +104,17 @@ impl Extractor for PropagationContext {
         self.0.keys().map(|k| k.as_ref()).collect()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use alloy::hex;
+
+    use super::*;
+
+    #[test]
+    fn test_propagation_context() {
+        let context: PropagationContext =
+            bc2wrap::deserialize(&alloy::hex::decode("0000000000000000").unwrap()).unwrap();
+        println!("{:?}", context);
+    }
+}
